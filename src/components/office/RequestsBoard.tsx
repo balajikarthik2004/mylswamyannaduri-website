@@ -133,7 +133,7 @@ export function RequestsBoard({
           Ink, sticky and slim: it marks this as a tool rather than
           a page, and keeps the operator and the way out reachable
           from anywhere in a long queue. */}
-      <header className="sticky top-0 z-30 bg-ink/90 glass text-paper shadow-raise backdrop-blur-xl border-b border-ink">
+      <header className="sticky top-0 z-30 bg-ink/85 text-paper shadow-raise backdrop-blur-xl border-b border-ink-2">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5 sm:px-8">
           <div className="flex items-center gap-3">
             <span className="font-display text-[1.05rem] leading-none tracking-[-0.015em]">
