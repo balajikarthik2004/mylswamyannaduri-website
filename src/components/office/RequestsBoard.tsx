@@ -133,7 +133,7 @@ export function RequestsBoard({
           Ink, sticky and slim: it marks this as a tool rather than
           a page, and keeps the operator and the way out reachable
           from anywhere in a long queue. */}
-      <header className="sticky top-0 z-30 bg-ink text-paper shadow-raise">
+      <header className="sticky top-0 z-30 bg-ink/90 glass text-paper shadow-raise backdrop-blur-xl border-b border-ink">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-3.5 sm:px-8">
           <div className="flex items-center gap-3">
             <span className="font-display text-[1.05rem] leading-none tracking-[-0.015em]">
@@ -221,8 +221,8 @@ export function RequestsBoard({
                 className={[
                   "group relative overflow-hidden rounded-xl border px-5 py-4 text-left transition-all duration-300",
                   active
-                    ? "border-ink bg-card shadow-raise"
-                    : "border-line bg-card/60 shadow-sink hover:-translate-y-0.5 hover:border-line-2 hover:bg-card hover:shadow-lift",
+                    ? "border-ink bg-card shadow-raise scale-[1.02]"
+                    : "border-line bg-card/60 shadow-sink hover:-translate-y-1 hover:border-line-2 hover:bg-card hover:shadow-lift",
                 ].join(" ")}
               >
                 <span
@@ -278,7 +278,7 @@ export function RequestsBoard({
               return (
                 <li
                   key={r.reference}
-                  className="flex overflow-hidden rounded-2xl border border-line bg-card shadow-lift transition-shadow duration-300 hover:shadow-raise"
+                  className="group flex overflow-hidden rounded-2xl border border-line bg-card shadow-lift transition-all duration-300 hover:shadow-raise hover:-translate-y-1 hover:border-line-2"
                 >
                   {/* Status reads at a glance from the edge, before any text */}
                   <span

@@ -102,17 +102,17 @@ export function LoginForm({ configured }: { configured: boolean }) {
 
       {/* ── Sign-in ────────────────────────────────────────── */}
       <main className="flex items-center justify-center bg-paper px-6 py-14 sm:px-10">
-        <div className="w-full max-w-sm">
-          <p className="kicker">Restricted</p>
-          <h2 className="mt-4 font-display text-[2rem] leading-none tracking-[-0.03em] text-ink">
+        <div className="w-full max-w-sm card p-8 sm:p-10 relative z-10">
+          <p className="kicker">Restricted Access</p>
+          <h2 className="mt-3 font-display text-[2rem] leading-none tracking-[-0.03em] text-ink">
             Sign in
           </h2>
-          <p className="mt-3 text-[0.88rem] leading-relaxed text-ink-3">
+          <p className="mt-2.5 text-[0.88rem] leading-relaxed text-ink-3">
             Enter the office credentials to review engagement requests.
           </p>
 
           {!configured ? (
-            <p className="mt-7 rounded-xl border border-ember/20 bg-ember-soft px-4 py-3.5 text-[0.8rem] leading-relaxed text-ember">
+            <p className="mt-6 rounded-xl border border-ember/20 bg-ember-soft px-4 py-3.5 text-[0.8rem] leading-relaxed text-ember">
               No credentials are configured on this server. Set{" "}
               <code className="font-mono">ADMIN_USER</code>,{" "}
               <code className="font-mono">ADMIN_PASSWORD</code> and{" "}
@@ -134,6 +134,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
                 spellCheck={false}
                 onChange={(e) => setUser(e.target.value)}
                 className={field}
+                placeholder="Enter username"
               />
             </div>
 
@@ -148,6 +149,7 @@ export function LoginForm({ configured }: { configured: boolean }) {
                 autoComplete="current-password"
                 onChange={(e) => setPassword(e.target.value)}
                 className={field}
+                placeholder="••••••••"
               />
             </div>
 
@@ -187,10 +189,6 @@ export function LoginForm({ configured }: { configured: boolean }) {
               )}
             </button>
           </form>
-
-          <p className="mt-10 border-t border-line pt-5 font-mono text-[0.58rem] uppercase leading-relaxed tracking-[0.14em] text-ink-4">
-            Sessions expire after eight hours
-          </p>
         </div>
       </main>
     </div>

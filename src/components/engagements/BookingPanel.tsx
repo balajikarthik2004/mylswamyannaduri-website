@@ -130,12 +130,14 @@ export function BookingPanel({
      this date does not offer. React's documented adjust-during-render
      pattern; an effect here would cascade a second render. */
   const [lastDate, setLastDate] = useState(date);
-  if (lastDate !== date) {
-    setLastDate(date);
-    setSession(null);
-    setErrors({});
-    setServerError(null);
-  }
+  useEffect(() => {
+    if (lastDate !== date) {
+      setLastDate(date);
+      setSession(null);
+      setErrors({});
+      setServerError(null);
+    }
+  }, [date, lastDate]);
 
   const offered = useMemo(() => (date ? sessionsForDate(date) : []), [date]);
   const taken = (date && bookedSessions[date]) || [];
@@ -231,7 +233,7 @@ export function BookingPanel({
                 <T v={{ en: "Provisional hold", ta: "தற்காலிக ஒதுக்கீடு" }} />
               </p>
               <p className="mt-1.5 font-display text-[1.7rem] leading-none tracking-[-0.02em]">
-                <T v={{ en: "Request received", ta: "கோரிக்கை பெறப்பட்டது" }} />
+                <T v={{ en: "Request Sent", ta: "கோரிக்கை பெறப்பட்டது" }} />
               </p>
               <p className="mt-3 tnum font-mono text-[0.8rem] tracking-[0.1em] text-brass-2">
                 {confirmed.reference}
@@ -249,24 +251,6 @@ export function BookingPanel({
         </div>
 
         <div className="px-7 pb-7 pt-8">
-          <p className="text-[0.9rem] leading-relaxed text-ink-2 lang-aware">
-            <T
-              v={{
-                en: "The session is held provisionally and a copy of this request has gone to his office.",
-                ta: "அமர்வு தற்காலிகமாக ஒதுக்கப்பட்டுள்ளது; இந்தக் கோரிக்கையின் நகல் அவரது அலுவலகத்திற்கு அனுப்பப்பட்டுள்ளது.",
-              }}
-            />{" "}
-            <span className="font-medium text-ink">
-              <T
-                v={{
-                  en: "Written confirmation goes to",
-                  ta: "எழுத்துப்பூர்வ உறுதிப்படுத்தல் இங்கு வரும்",
-                }}
-              />{" "}
-              {confirmed.email}
-            </span>
-            .
-          </p>
 
           {/* ── What was requested ─────────────────────────── */}
           <p className={`${labelCls} mt-8`}>
@@ -357,11 +341,7 @@ export function BookingPanel({
                 {
                   en: "You receive written confirmation, usually within three working days.",
                   ta: "பொதுவாக மூன்று வேலை நாட்களுக்குள் எழுத்துப்பூர்வ உறுதிப்படுத்தல் வரும்.",
-                },
-                {
-                  en: "The exact hour, agenda and travel are settled directly with the office.",
-                  ta: "சரியான நேரம், நிகழ்ச்சி நிரல் மற்றும் பயணம் அலுவலகத்துடன் நேரடியாக முடிவு செய்யப்படும்.",
-                },
+                }
               ].map((s, i) => (
                 <li key={s.en} className="flex gap-3.5">
                   <span
