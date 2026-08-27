@@ -2,10 +2,13 @@
 
 import { Suspense, useMemo, useRef, useEffect } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { Line, useTexture, AdaptiveDpr, Preload } from "@react-three/drei";
+import { useTexture, AdaptiveDpr, Preload } from "@react-three/drei";
 import * as THREE from "three";
 
 import { Spacecraft } from "./Spacecraft";
+import { Atmosphere } from "./Atmosphere";
+import { Starfield } from "./Starfield";
+import { OrbitTrail } from "./OrbitTrail";
 import { sceneTarget, pointer, setNarrowViewport } from "./scene-store";
 import { useMediaQuery } from "@/lib/use-media-query";
 
@@ -17,6 +20,7 @@ function Body({
   opacityRef,
   spinSpeed = 0.035,
   radius = 1,
+  glow,
 }: {
   url: string;
   bump: number;
@@ -24,6 +28,14 @@ function Body({
   spinSpeed?: number;
   /** Bodies are nested, never coincident, so they can't z-fight. */
   radius?: number;
+  /** Limb-darkening shell for this body. */
+  glow: {
+    color: string;
+    strength: number;
+    power?: number;
+    thickness?: number;
+    scatter?: { color: string; strength: number };
+  };
 }) {
   const map = useTexture(url);
   const mesh = useRef<THREE.Mesh>(null);
@@ -39,71 +51,67 @@ function Body({
   });
 
   return (
-    <mesh ref={mesh} rotation={[0.22, 0, 0.06]}>
-      <sphereGeometry args={[radius, 128, 128]} />
-      {/* Pierced props keep the texture configured declaratively — no
-          mutating a hook's return value during render or in an effect. */}
-      <meshStandardMaterial
-        ref={mat}
-        map={map}
-        map-colorSpace={THREE.SRGBColorSpace}
-        map-anisotropy={8}
-        bumpMap={map}
-        bumpScale={bump}
-        roughness={0.95}
-        metalness={0}
-        transparent
+    <group rotation={[0.22, 0, 0.06]}>
+      <mesh ref={mesh}>
+        <sphereGeometry args={[radius, 128, 128]} />
+        {/* Pierced props keep the texture configured declaratively — no
+            mutating a hook's return value during render or in an effect. */}
+        <meshStandardMaterial
+          ref={mat}
+          map={map}
+          map-colorSpace={THREE.SRGBColorSpace}
+          map-anisotropy={8}
+          bumpMap={map}
+          bumpScale={bump}
+          roughness={0.92}
+          metalness={0}
+          transparent
+        />
+      </mesh>
+      <Atmosphere
+        radius={radius}
+        color={glow.color}
+        strength={glow.strength}
+        power={glow.power}
+        thickness={glow.thickness}
+        scatter={glow.scatter}
+        opacityRef={opacityRef}
       />
-    </mesh>
+    </group>
   );
 }
 
-/* ── Orbit ring + spacecraft riding it ─────────────────────── */
+/* ── Orbit trail + spacecraft riding it ────────────────────── */
+
+const ORBIT_RADIUS = 1.5;
 
 function Orbit({ satRef }: { satRef: React.RefObject<number> }) {
   const ring = useRef<THREE.Group>(null);
   const rider = useRef<THREE.Group>(null);
-  const line = useRef<THREE.Object3D & { material: THREE.Material & { opacity: number } }>(null);
-
-  const RADIUS = 1.5;
-  const points = useMemo(() => {
-    const pts: [number, number, number][] = [];
-    for (let i = 0; i <= 160; i++) {
-      const a = (i / 160) * Math.PI * 2;
-      pts.push([Math.cos(a) * RADIUS, 0, Math.sin(a) * RADIUS]);
-    }
-    return pts;
-  }, []);
+  /** Shared with the trail shader so the fade tracks the craft exactly. */
+  const head = useRef(0);
 
   useFrame((state, dt) => {
     const o = satRef.current ?? 0;
+    const t = state.clock.elapsedTime * 0.36;
+    head.current = t;
+
     if (rider.current) {
-      const t = state.clock.elapsedTime * 0.36;
-      rider.current.position.set(Math.cos(t) * RADIUS, 0, Math.sin(t) * RADIUS);
+      rider.current.position.set(
+        Math.cos(t) * ORBIT_RADIUS,
+        0,
+        Math.sin(t) * ORBIT_RADIUS,
+      );
       // Keep the bus broadside to its direction of travel.
       rider.current.rotation.y = -t + Math.PI / 2;
       rider.current.visible = o > 0.02;
-    }
-    if (line.current) {
-      line.current.material.opacity = o * 0.55;
-      line.current.visible = o > 0.02;
     }
     if (ring.current) ring.current.rotation.y += dt * 0.02;
   });
 
   return (
     <group ref={ring} rotation={[0.38, 0, 0.19]}>
-      <Line
-        ref={line as never}
-        points={points}
-        color="#1b3a6b"
-        lineWidth={1}
-        transparent
-        opacity={0}
-        dashed
-        dashSize={0.085}
-        gapSize={0.055}
-      />
+      <OrbitTrail radius={ORBIT_RADIUS} headRef={head} opacityRef={satRef} />
       <group ref={rider}>
         <Spacecraft opacityRef={satRef} />
       </group>
@@ -111,7 +119,7 @@ function Orbit({ satRef }: { satRef: React.RefObject<number> }) {
   );
 }
 
-/* ── Fine dust motes so the paper never looks empty ────────── */
+/* ── Fine dust motes in the near field ─────────────────────── */
 
 function Dust() {
   const pts = useRef<THREE.Points>(null);
@@ -123,7 +131,7 @@ function Dust() {
       seed = (seed * 1664525 + 1013904223) >>> 0;
       return seed / 0xffffffff;
     };
-    const N = 420;
+    const N = 260;
     const pos = new Float32Array(N * 3);
     for (let i = 0; i < N; i++) {
       pos[i * 3] = (rand() - 0.5) * 22;
@@ -145,10 +153,10 @@ function Dust() {
   return (
     <points ref={pts} geometry={geom}>
       <pointsMaterial
-        size={0.028}
-        color="#5c6470"
+        size={0.026}
+        color="#7a8290"
         transparent
-        opacity={0.34}
+        opacity={0.26}
         sizeAttenuation
         depthWrite={false}
       />
@@ -161,11 +169,13 @@ function Dust() {
 function Rig() {
   const group = useRef<THREE.Group>(null);
   const tilt = useRef<THREE.Group>(null);
+  const key = useRef<THREE.DirectionalLight>(null);
   const moonO = useRef(1);
   const marsO = useRef(0);
+  const earthO = useRef(0);
   const satO = useRef(1);
 
-  useFrame((_, delta) => {
+  useFrame((state, delta) => {
     const dt = Math.min(delta, 0.05);
     const g = group.current;
     if (!g) return;
@@ -179,7 +189,20 @@ function Rig() {
 
     moonO.current = THREE.MathUtils.damp(moonO.current, sceneTarget.moon, 5.5, dt);
     marsO.current = THREE.MathUtils.damp(marsO.current, sceneTarget.mars, 5.5, dt);
+    earthO.current = THREE.MathUtils.damp(earthO.current, sceneTarget.earth, 5.5, dt);
     satO.current = THREE.MathUtils.damp(satO.current, sceneTarget.sat, 4, dt);
+
+    // The key light drifts on a long, slow arc. The terminator is the single
+    // most legible thing on a sphere, so moving it — even barely — is what
+    // keeps the body from reading as a static bitmap during a long scroll.
+    if (key.current) {
+      const t = state.clock.elapsedTime * 0.045;
+      key.current.position.set(
+        4.5 + Math.sin(t) * 1.4,
+        2.4 + Math.sin(t * 0.7) * 0.7,
+        4 + Math.cos(t) * 1.1,
+      );
+    }
 
     // Gentle parallax toward the cursor.
     if (tilt.current) {
@@ -199,21 +222,72 @@ function Rig() {
   });
 
   return (
-    <group ref={tilt}>
-      <group ref={group}>
-        <Suspense fallback={null}>
-          <Body url="/tex/moon.jpg" bump={0.028} opacityRef={moonO} spinSpeed={0.035} />
-          <Body
-            url="/tex/mars.jpg"
-            bump={0.02}
-            opacityRef={marsO}
-            spinSpeed={0.045}
-            radius={0.985}
-          />
-        </Suspense>
-        <Orbit satRef={satO} />
+    <>
+      {/* Key light — gives the terminator its edge */}
+      <directionalLight
+        ref={key}
+        position={[4.5, 2.4, 4]}
+        intensity={2.6}
+        color="#fff4e2"
+      />
+      {/* Cool bounce so the dark limb reads as paper, not void */}
+      <directionalLight position={[-5, -1.4, -2]} intensity={0.6} color="#c3d2ea" />
+      {/* Brass kicker from behind: separates the body's silhouette from the
+          ivory ground without lifting the whole shaded side. */}
+      <directionalLight position={[-3.2, 1.8, -4.5]} intensity={0.85} color="#e0bd76" />
+      <ambientLight intensity={0.46} />
+      <hemisphereLight args={["#ffffff", "#cfd6e2", 0.32]} />
+
+      <group ref={tilt}>
+        <group ref={group}>
+          <Suspense fallback={null}>
+            <Body
+              url="/tex/moon.jpg"
+              bump={0.032}
+              opacityRef={moonO}
+              spinSpeed={0.035}
+              /* Airless: the limb gets a whisper of cool ink, nothing more. */
+              glow={{ color: "#2c3a52", strength: 0.26, power: 5, thickness: 1.03 }}
+            />
+            <Body
+              url="/tex/mars.jpg"
+              bump={0.022}
+              opacityRef={marsO}
+              spinSpeed={0.045}
+              radius={0.985}
+              /* A thin dusty atmosphere — warm, and barely there. */
+              glow={{
+                color: "#5c3b26",
+                strength: 0.3,
+                power: 4.4,
+                thickness: 1.038,
+                scatter: { color: "#c97a45", strength: 0.5 },
+              }}
+            />
+            {/* Earth was never mounted, though the texture and an `earth`
+                scene preset both existed — the INSAT/IRS panel was showing a
+                spacecraft orbiting nothing. */}
+            <Body
+              url="/tex/earth.jpg"
+              bump={0.018}
+              opacityRef={earthO}
+              spinSpeed={0.04}
+              radius={0.97}
+              /* The one body here with real air, so it is the one that gets
+                 a genuine lit-side scatter as well as a darkened limb. */
+              glow={{
+                color: "#1f3c66",
+                strength: 0.42,
+                power: 3.2,
+                thickness: 1.07,
+                scatter: { color: "#7fb2ef", strength: 0.85 },
+              }}
+            />
+          </Suspense>
+          <Orbit satRef={satO} />
+        </group>
       </group>
-    </group>
+    </>
   );
 }
 
@@ -252,15 +326,17 @@ export default function CelestialScene() {
         camera={{ position: [0, 0, 7], fov: 42 }}
         frameloop="always"
       >
-        {/* Key light — gives the terminator its edge */}
-        <directionalLight position={[4.5, 2.4, 4]} intensity={2.5} color="#fff6e8" />
-        {/* Cool bounce so the dark limb reads as paper, not void */}
-        <directionalLight position={[-5, -1.4, -2]} intensity={0.62} color="#c3d2ea" />
-        <ambientLight intensity={0.52} />
-        <hemisphereLight args={["#ffffff", "#cfd6e2", 0.35]} />
-
         <Rig />
+        {/* The far field sits outside the rig so it never inherits the
+            per-section pan — the sky stays put while the bodies move. */}
+        <Starfield />
         <Dust />
+
+        {/* No bloom or vignette pass here on purpose. Both trade on adding
+            light, and over ivory there is no headroom to add it into — they
+            cost a full-screen pass and an alpha round-trip to produce an
+            effect that is invisible on this ground. Depth on paper comes
+            from the ink in the limb shells instead. */}
 
         <AdaptiveDpr pixelated={false} />
         <Preload all />

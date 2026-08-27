@@ -38,7 +38,7 @@ export function Hero() {
             className="kicker flex items-center gap-3 opacity-0"
             style={{ animation: "char-in .9s var(--ease-out-expo) .1s forwards" }}
           >
-            <span className="inline-block h-px w-10 bg-ember" aria-hidden="true" />
+            <span className="metal-rule inline-block h-px w-10" aria-hidden="true" />
             <T v={profile.epithet} />
           </p>
 
@@ -107,16 +107,16 @@ export function Hero() {
           >
             <Link
               href="/missions"
-              className="group inline-flex items-center gap-2.5 rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper transition-all duration-300 hover:bg-accent"
+              className="btn btn-primary px-6 py-3"
             >
               <T v={{ en: "Explore the missions", ta: "பயணங்களைக் காண்க" }} />
-              <span className="transition-transform duration-300 group-hover:translate-x-1">
+              <span className="btn-arrow">
                 →
               </span>
             </Link>
             <Link
               href="/#about"
-              className="inline-flex items-center gap-2 rounded-full border border-line-2 px-6 py-3 text-sm font-medium text-ink transition-all duration-300 hover:border-ink hover:bg-paper-2"
+              className="btn btn-ghost px-6 py-3"
             >
               <T v={{ en: "Read the profile", ta: "சுயவிவரம் படிக்க" }} />
             </Link>

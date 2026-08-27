@@ -19,7 +19,7 @@ export function About() {
         <div className="mt-16 grid gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-20">
           {/* Portrait */}
           <Reveal className="relative">
-            <div className="relative aspect-4/5 overflow-hidden rounded-2xl border border-line bg-paper-2">
+            <div className="relative aspect-4/5 overflow-hidden rounded-2xl border border-line bg-paper-2 shadow-raise">
               <Image
                 src="/img/gallery/capture1.png"
                 alt="Dr. Mylswamy Annadurai"
@@ -64,7 +64,7 @@ export function About() {
 
             {/* Pull quote */}
             <Reveal delay={340}>
-              <blockquote className="mt-12 border-l-2 border-ember pl-6">
+              <blockquote className="mt-12 border-l-2 border-brass-2 pl-6">
                 <p className="font-display text-[clamp(1.35rem,2.4vw,1.85rem)] leading-[1.35] tracking-[-0.015em] text-ink lang-aware">
                   <T v={profile.quote} />
                 </p>
@@ -73,7 +73,7 @@ export function About() {
 
             {/* Education strip */}
             <Reveal delay={430}>
-              <dl className="mt-12 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
+              <dl className="mt-12 card grid gap-px overflow-hidden bg-line sm:grid-cols-3">
                 {[
                   {
                     k: { en: "B.E. 1980", ta: "இளநிலை 1980" },
@@ -88,8 +88,8 @@ export function About() {
                     v: { en: "Anna University" },
                   },
                 ].map((d) => (
-                  <div key={d.k.en} className="bg-paper/85 px-5 py-5 backdrop-blur-sm">
-                    <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-ember">
+                  <div key={d.k.en} className="bg-card px-5 py-5">
+                    <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-brass">
                       <T v={d.k} />
                     </dt>
                     <dd className="mt-2 text-[0.82rem] leading-snug text-ink-2">

@@ -36,14 +36,14 @@ export function AwardsPreview() {
 
         {/* Category counts */}
         <Reveal delay={120}>
-          <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-5">
+          <div className="mt-14 card grid gap-px overflow-hidden bg-line sm:grid-cols-2 lg:grid-cols-5">
             {awardCategories.map((c) => {
               const n = awards.filter((a) => a.category === c.id).length;
               return (
                 <Link
                   key={c.id}
                   href={`/awards?c=${c.id}`}
-                  className="group bg-paper/85 px-6 py-7 backdrop-blur-sm transition-colors duration-400 hover:bg-paper-2/90"
+                  className="group bg-card px-6 py-7 transition-colors duration-400 hover:bg-paper-2/70"
                 >
                   <p className="font-display text-[2.1rem] leading-none tracking-[-0.03em] text-ink">
                     {n}
@@ -67,7 +67,7 @@ export function AwardsPreview() {
               delay={(i % 2) * 80}
               className="group flex items-baseline gap-5 border-b border-line py-5"
             >
-              <span className="w-12 shrink-0 font-mono text-[0.72rem] tracking-[0.08em] text-ember">
+              <span className="w-12 shrink-0 font-mono text-[0.72rem] tracking-[0.08em] text-brass">
                 {a.year ?? "—"}
               </span>
               <span className="min-w-0">
@@ -88,10 +88,10 @@ export function AwardsPreview() {
           <div className="mt-12 flex justify-center">
             <Link
               href="/awards"
-              className="group inline-flex items-center gap-2.5 rounded-full bg-ink px-6 py-3 text-sm font-medium text-paper transition-all duration-300 hover:bg-accent"
+              className="btn btn-primary px-6 py-3"
             >
               <T v={{ en: "See all awards", ta: "அனைத்து விருதுகளையும் காண்க" }} />
-              <span className="transition-transform duration-300 group-hover:translate-x-1">
+              <span className="btn-arrow">
                 →
               </span>
             </Link>

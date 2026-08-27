@@ -1,12 +1,15 @@
 import {
   BLACKOUT_DATES,
   BOOKING_HORIZON_MONTHS,
+  DURATION_CHOICES,
   MIN_NOTICE_DAYS,
-  WEEKDAY_SLOTS,
+  WEEKDAY_SESSIONS,
   engagementTypes,
   publicEvents,
+  sessions,
   type EngagementTypeId,
   type PublicEvent,
+  type SessionId,
 } from "@/lib/data/engagements";
 
 /**
@@ -64,20 +67,33 @@ export function eventsOn(key: string): PublicEvent[] {
   });
 }
 
-export function slotsForDate(key: string): string[] {
-  return WEEKDAY_SLOTS[fromKey(key).getDay()] ?? [];
+export function sessionsForDate(key: string): SessionId[] {
+  return WEEKDAY_SESSIONS[fromKey(key).getDay()] ?? [];
 }
 
-export function getDayStatus(key: string, bookedSlots: Record<string, string[]> = {}): DayStatus {
+export function sessionById(id: SessionId) {
+  return sessions.find((s) => s.id === id);
+}
+
+/** Minutes past midnight, for comparing an "HH:MM" against a window. */
+export function minutesOfDay(time: string): number {
+  const [h, m] = time.split(":").map(Number);
+  return h * 60 + m;
+}
+
+export function getDayStatus(
+  key: string,
+  bookedSessions: Record<string, string[]> = {},
+): DayStatus {
   const date = fromKey(key);
   if (date < startOfToday()) return "past";
   if (eventsOn(key).length > 0) return "booked";
   if (BLACKOUT_DATES.includes(key)) return "blackout";
-  if (slotsForDate(key).length === 0) return "closed";
+  if (sessionsForDate(key).length === 0) return "closed";
   if (date < earliestBookable()) return "notice";
   if (date > latestBookable()) return "closed";
-  const taken = bookedSlots[key] ?? [];
-  if (taken.length >= slotsForDate(key).length) return "booked";
+  const taken = bookedSessions[key] ?? [];
+  if (taken.length >= sessionsForDate(key).length) return "booked";
   return "open";
 }
 
@@ -107,6 +123,44 @@ export function addMinutesToTime(time: string, minutes: number): string {
   const hh = String(Math.floor(total / 60) % 24).padStart(2, "0");
   const mm = String(total % 60).padStart(2, "0");
   return `${hh}:${mm}`;
+}
+
+/**
+ * Where an engagement ends, as a date key *and* a wall-clock time.
+ *
+ * `addMinutesToTime` wraps the clock at midnight but leaves the date where it
+ * was, so anything running past midnight would report an end earlier than its
+ * own start. Rolling the date alongside the clock keeps the pair coherent —
+ * which matters the moment a time is handed to a calendar, where a backwards
+ * end is not a cosmetic error but an invalid event.
+ *
+ * The day arithmetic goes through UTC so it can never be bent by the
+ * viewer's own daylight-saving rules; only the calendar date is being
+ * counted, never an instant.
+ */
+export function endDateTime(
+  dateKey: string,
+  time: string,
+  minutes: number,
+): { dateKey: string; time: string } {
+  const [y, mo, d] = dateKey.split("-").map(Number);
+  const [h, mi] = time.split(":").map(Number);
+
+  const total = h * 60 + mi + minutes;
+  const dayShift = Math.floor(total / 1440);
+  const rem = ((total % 1440) + 1440) % 1440;
+
+  const rolled = new Date(Date.UTC(y, mo - 1, d + dayShift));
+  const yy = rolled.getUTCFullYear();
+  const mm = String(rolled.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(rolled.getUTCDate()).padStart(2, "0");
+
+  return {
+    dateKey: `${yy}-${mm}-${dd}`,
+    time: `${String(Math.floor(rem / 60)).padStart(2, "0")}:${String(
+      rem % 60,
+    ).padStart(2, "0")}`,
+  };
 }
 
 /**
@@ -174,9 +228,17 @@ export function formatTime12(time: string): string {
 /** Validation shared by the form and the API route. */
 export type BookingInput = {
   date: string;
-  time: string;
+  /** Half-day window the request is against. */
+  session: SessionId;
   type: EngagementTypeId;
   mode: "in-person" | "online";
+  /** How long the engagement should run, in minutes. */
+  durationMinutes: number;
+  /**
+   * An exact start time, IST. Only meaningful online, where a call has to
+   * begin at a stated minute; an in-person visit is settled with the office.
+   */
+  preferredTime?: string;
   name: string;
   email: string;
   phone?: string;
@@ -188,22 +250,22 @@ export type BookingInput = {
 
 export function validateBooking(
   input: Partial<BookingInput>,
-  bookedSlots: Record<string, string[]> = {},
+  bookedSessions: Record<string, string[]> = {},
 ): Record<string, string> {
   const errors: Record<string, string> = {};
   const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
   if (!input.date) errors.date = "Choose a date.";
   else {
-    const status = getDayStatus(input.date, bookedSlots);
+    const status = getDayStatus(input.date, bookedSessions);
     if (status !== "open") errors.date = "That date is not open for requests.";
   }
 
-  if (!input.time) errors.time = "Choose a time.";
-  else if (input.date && !slotsForDate(input.date).includes(input.time)) {
-    errors.time = "That slot is not offered on this day.";
-  } else if (input.date && (bookedSlots[input.date] ?? []).includes(input.time)) {
-    errors.time = "That slot has just been taken.";
+  if (!input.session) errors.session = "Choose morning or afternoon.";
+  else if (input.date && !sessionsForDate(input.date).includes(input.session)) {
+    errors.session = "That session is not offered on this day.";
+  } else if (input.date && (bookedSessions[input.date] ?? []).includes(input.session)) {
+    errors.session = "That session has just been taken.";
   }
 
   if (!input.type || !engagementTypes.some((t) => t.id === input.type)) {
@@ -212,6 +274,38 @@ export function validateBooking(
   if (input.mode !== "in-person" && input.mode !== "online") {
     errors.mode = "Choose in person or online.";
   }
+
+  if (!input.durationMinutes) errors.durationMinutes = "Choose how long it should run.";
+  else if (!DURATION_CHOICES.includes(input.durationMinutes as never)) {
+    errors.durationMinutes = "That duration is not offered.";
+  }
+
+  // Online calls state an exact start; it must land inside the session and
+  // leave room for the duration that was asked for.
+  if (input.mode === "online") {
+    if (!input.preferredTime) {
+      errors.preferredTime = "Give a start time for the call.";
+    } else if (!/^\d{2}:\d{2}$/.test(input.preferredTime)) {
+      errors.preferredTime = "Use a time like 10:30.";
+    } else if (input.session) {
+      const window = sessionById(input.session);
+      const start = minutesOfDay(input.preferredTime);
+      if (window) {
+        const from = minutesOfDay(window.start);
+        const to = minutesOfDay(window.end);
+        if (start < from || start > to) {
+          errors.preferredTime = `Pick a time between ${formatTime12(
+            window.start,
+          )} and ${formatTime12(window.end)}.`;
+        } else if (start + (input.durationMinutes ?? 0) > to) {
+          errors.preferredTime = `That runs past ${formatTime12(
+            window.end,
+          )} — start earlier or shorten it.`;
+        }
+      }
+    }
+  }
+
   if (!input.name?.trim()) errors.name = "Your name is required.";
   if (!input.email?.trim()) errors.email = "An email address is required.";
   else if (!emailRe.test(input.email.trim())) errors.email = "That email doesn't look right.";

@@ -42,7 +42,7 @@ export function AwardsClient() {
       <div className="container-x pt-36 pb-24">
         <Reveal>
           <p className="kicker flex items-center gap-3">
-            <span className="inline-block h-px w-8 bg-ember" aria-hidden="true" />
+            <span className="inline-block h-px w-8 bg-brass-2" aria-hidden="true" />
             <T v={{ en: "Recognition", ta: "அங்கீகாரம்" }} />
           </p>
         </Reveal>
@@ -117,7 +117,7 @@ export function AwardsClient() {
               key={`${a.title}-${a.by ?? ""}-${i}`}
               className="group grid grid-cols-[3.5rem_1fr] items-baseline gap-x-5 border-b border-line py-5 transition-colors hover:bg-paper-2/50 sm:grid-cols-[5rem_1fr_10rem] sm:gap-x-8"
             >
-              <span className="font-mono text-[0.72rem] tracking-[0.08em] text-ember">
+              <span className="font-mono text-[0.72rem] tracking-[0.08em] text-brass">
                 {a.year ?? "—"}
               </span>
               <span className="min-w-0">

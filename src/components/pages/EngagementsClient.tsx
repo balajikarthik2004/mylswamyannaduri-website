@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  BOOKING_HORIZON_MONTHS,
-  MIN_NOTICE_DAYS,
   TIMEZONE_LABEL,
   engagementTypes,
   eventKindLabels,
   publicEvents,
   type PublicEvent,
+  type SessionId,
 } from "@/lib/data/engagements";
 import {
   earliestBookable,
@@ -58,7 +57,7 @@ export function EngagementsClient() {
     return new Date(first.getFullYear(), first.getMonth(), 1);
   });
   const [selected, setSelected] = useState<string | null>(null);
-  const [bookedSlots, setBookedSlots] = useState<Record<string, string[]>>({});
+  const [bookedSessions, setBookedSessions] = useState<Record<string, string[]>>({});
   const [tab, setTab] = useState<Tab>("upcoming");
 
   // Pull the slots already spoken for so the grid reflects real state.
@@ -67,7 +66,7 @@ export function EngagementsClient() {
     fetch("/api/engagements")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
-        if (!cancelled && d?.booked) setBookedSlots(d.booked);
+        if (!cancelled && d?.booked) setBookedSessions(d.booked);
       })
       .catch(() => {
         /* the calendar still works from the static rules alone */
@@ -94,7 +93,7 @@ export function EngagementsClient() {
         {/* Masthead */}
         <Reveal>
           <p className="kicker flex items-center gap-3">
-            <span className="inline-block h-px w-8 bg-ember" aria-hidden="true" />
+            <span className="inline-block h-px w-8 bg-brass-2" aria-hidden="true" />
             <T v={{ en: "Engagements", ta: "நிகழ்வுகள்" }} />
           </p>
         </Reveal>
@@ -116,27 +115,21 @@ export function EngagementsClient() {
 
         {/* Booking ground rules */}
         <Reveal delay={210}>
-          <dl className="mt-12 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-4">
+          <dl className="card mt-12 grid gap-px overflow-hidden bg-line sm:grid-cols-2">
             {[
-              {
-                k: { en: "Notice required", ta: "தேவையான அறிவிப்பு" },
-                v: `${MIN_NOTICE_DAYS} days`,
-              },
-              {
-                k: { en: "Booking horizon", ta: "முன்பதிவு காலம்" },
-                v: `${BOOKING_HORIZON_MONTHS} months`,
-              },
               { k: { en: "All times", ta: "அனைத்து நேரங்களும்" }, v: TIMEZONE_LABEL },
               {
                 k: { en: "Confirmation", ta: "உறுதிப்படுத்தல்" },
                 v: t({ en: "≤ 3 working days", ta: "≤ 3 வேலை நாட்கள்" }),
               },
             ].map((row) => (
-              <div key={row.k.en} className="bg-paper/85 px-6 py-6 backdrop-blur-sm">
-                <dt className="font-mono text-[0.62rem] uppercase tracking-[0.16em] text-ink-3">
+              <div key={row.k.en} className="bg-card px-6 py-6">
+                <dt className="font-mono text-[0.6rem] uppercase tracking-[0.16em] text-ink-3">
                   <T v={row.k} />
                 </dt>
-                <dd className="mt-2 text-[1.05rem] font-medium text-ink">{row.v}</dd>
+                <dd className="mt-2.5 font-display text-[1.35rem] leading-none tracking-[-0.02em] text-ink">
+                  {row.v}
+                </dd>
               </div>
             ))}
           </dl>
@@ -144,14 +137,14 @@ export function EngagementsClient() {
 
         {/* Calendar + booking */}
         <div className="mt-16 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-14">
-          <Reveal className="rounded-2xl border border-line bg-paper/70 p-7 backdrop-blur-sm">
+          <Reveal className="card-raised h-fit p-7 sm:p-8">
             {mounted ? (
               <AvailabilityCalendar
                 cursor={cursor}
                 onCursorChange={setCursor}
                 selected={selected}
                 onSelect={setSelected}
-                bookedSlots={bookedSlots}
+                bookedSessions={bookedSessions}
                 lang={lang}
               />
             ) : (
@@ -163,17 +156,17 @@ export function EngagementsClient() {
             {mounted ? (
               <BookingPanel
                 date={selected}
-                bookedSlots={bookedSlots}
+                bookedSessions={bookedSessions}
                 lang={lang}
-                onBooked={(d, time) =>
-                  setBookedSlots((prev) => ({
+                onBooked={(d, session: SessionId) =>
+                  setBookedSessions((prev) => ({
                     ...prev,
-                    [d]: [...(prev[d] ?? []), time],
+                    [d]: [...(prev[d] ?? []), session],
                   }))
                 }
               />
             ) : (
-              <div className="h-full min-h-[22rem] rounded-2xl border border-dashed border-line-2 bg-paper-2/30" />
+              <div className="card h-full min-h-[26rem] border-dashed" />
             )}
           </Reveal>
         </div>
@@ -185,15 +178,15 @@ export function EngagementsClient() {
               <T v={{ en: "What he takes on", ta: "அவர் ஏற்கும் நிகழ்வுகள்" }} />
             </h2>
           </Reveal>
-          <ul className="mt-8 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-5">
+          <ul className="card mt-8 grid gap-px overflow-hidden bg-line sm:grid-cols-2 lg:grid-cols-5">
             {engagementTypes.map((et, i) => (
               <Reveal
                 as="li"
                 key={et.id}
                 delay={i * 70}
-                className="bg-paper/85 px-6 py-7 backdrop-blur-sm"
+                className="group bg-card px-6 py-7 transition-colors duration-500 hover:bg-paper-2/70"
               >
-                <p className="font-mono text-[0.6rem] uppercase tracking-[0.14em] text-ember">
+                <p className="inline-block rounded-full bg-brass-soft px-2.5 py-1 font-mono text-[0.58rem] uppercase tracking-[0.12em] text-brass">
                   {et.duration} min
                 </p>
                 <p className="mt-3 text-[0.95rem] font-medium leading-snug text-ink lang-aware">

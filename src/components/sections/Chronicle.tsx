@@ -90,10 +90,12 @@ export function Chronicle() {
             />
             {/* Progress fill */}
             <div
-              className="absolute left-[3px] top-2 w-px origin-top bg-accent"
+              className="absolute left-[3px] top-2 w-px origin-top"
               style={{
                 height: `calc((100% - 1rem) * ${progress})`,
                 transition: "height 120ms linear",
+                background:
+                  "linear-gradient(180deg, var(--color-accent-3), var(--color-accent-2) 35%, var(--color-accent))",
               }}
               aria-hidden="true"
             />

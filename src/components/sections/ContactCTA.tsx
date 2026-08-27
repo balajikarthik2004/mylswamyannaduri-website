@@ -39,16 +39,16 @@ export function ContactCTA() {
             <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/engagements"
-                className="group inline-flex items-center gap-2.5 rounded-full bg-ink px-7 py-3.5 text-sm font-medium text-paper transition-all duration-300 hover:bg-accent"
+                className="btn btn-primary px-7 py-3.5"
               >
                 <T v={{ en: "Check availability", ta: "கிடைக்கும் நேரத்தைப் பார்க்க" }} />
-                <span className="transition-transform duration-300 group-hover:translate-x-1">
+                <span className="btn-arrow">
                   →
                 </span>
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 rounded-full border border-line-2 px-7 py-3.5 text-sm font-medium text-ink transition-all duration-300 hover:border-ink hover:bg-paper-2"
+                className="btn btn-ghost px-7 py-3.5"
               >
                 <T v={{ en: "Get in touch", ta: "தொடர்பு கொள்ள" }} />
               </Link>

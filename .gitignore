@@ -42,3 +42,6 @@ next-env.d.ts
 
 # Local booking store
 .data/
+
+# Playwright MCP scratch
+.playwright-mcp/

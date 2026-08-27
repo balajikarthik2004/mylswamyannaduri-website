@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
-import { append, bookedSlotsByDate } from "@/lib/server/booking-store";
+import { append, bookedSessionsByDate } from "@/lib/server/booking-store";
 import { validateBooking, type BookingInput } from "@/lib/engagements";
-import type { EngagementTypeId } from "@/lib/data/engagements";
+import type { EngagementTypeId, SessionId } from "@/lib/data/engagements";
 
 // Requests mutate a store, so this route is always dynamic.
 export const dynamic = "force-dynamic";
 
-/** Which slots are already spoken for — used to grey out the calendar. */
+/** Which sessions are already spoken for — used to grey out the calendar. */
 export async function GET() {
-  const booked = await bookedSlotsByDate();
+  const booked = await bookedSessionsByDate();
   return NextResponse.json(
     { booked },
     { headers: { "Cache-Control": "no-store" } },
@@ -56,9 +56,11 @@ export async function POST(request: Request) {
 
   const input: BookingInput = {
     date: str(body.date),
-    time: str(body.time),
+    session: str(body.session) as SessionId,
     type: str(body.type) as EngagementTypeId,
     mode: str(body.mode) === "online" ? "online" : "in-person",
+    durationMinutes: Number(body.durationMinutes) || 0,
+    preferredTime: str(body.preferredTime) || undefined,
     name: str(body.name),
     email: str(body.email),
     phone: str(body.phone) || undefined,
@@ -70,7 +72,7 @@ export async function POST(request: Request) {
 
   // Re-validate on the server: the client's copy of what's free may be stale,
   // and client-side checks are a convenience, never a guarantee.
-  const booked = await bookedSlotsByDate();
+  const booked = await bookedSessionsByDate();
   const errors = validateBooking(input, booked);
   if (Object.keys(errors).length > 0) {
     return NextResponse.json({ errors }, { status: 422 });
@@ -84,7 +86,7 @@ export async function POST(request: Request) {
       reference: record.reference,
       status: record.status,
       date: record.date,
-      time: record.time,
+      session: record.session,
     },
     { status: 201, headers: { "Cache-Control": "no-store" } },
   );

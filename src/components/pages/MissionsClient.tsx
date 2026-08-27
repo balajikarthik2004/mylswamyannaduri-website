@@ -12,7 +12,7 @@ export function MissionsClient() {
         <div className="container-x pt-36 pb-16">
           <Reveal>
             <p className="kicker flex items-center gap-3">
-              <span className="inline-block h-px w-8 bg-ember" aria-hidden="true" />
+              <span className="inline-block h-px w-8 bg-brass-2" aria-hidden="true" />
               <T v={{ en: "Missions", ta: "பயணங்கள்" }} />
             </p>
           </Reveal>
@@ -46,7 +46,7 @@ export function MissionsClient() {
               <div>
                 <Reveal>
                   <p className="kicker flex items-center gap-3">
-                    <span className="font-mono text-ember">
+                    <span className="font-mono text-brass">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className="inline-block h-px w-7 bg-line-2" aria-hidden="true" />
@@ -86,7 +86,7 @@ export function MissionsClient() {
 
               {m.image ? (
                 <Reveal delay={140}>
-                  <div className="relative aspect-4/3 overflow-hidden rounded-2xl border border-line bg-paper-2">
+                  <div className="relative aspect-4/3 overflow-hidden rounded-2xl border border-line bg-paper-2 shadow-raise">
                     <Image
                       src={m.image}
                       alt=""
@@ -104,12 +104,12 @@ export function MissionsClient() {
       ))}
 
       <div className="container-x border-t border-line py-20">
-        <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line md:grid-cols-3">
+        <div className="card grid gap-px overflow-hidden bg-line md:grid-cols-3">
           {missionStats.map((s, i) => (
             <Reveal
               key={s.label.en}
               delay={i * 100}
-              className="bg-paper/85 px-7 py-9 backdrop-blur-sm"
+              className="bg-card px-7 py-9"
             >
               <p className="font-display text-[clamp(2.2rem,4vw,3.2rem)] leading-none tracking-[-0.03em] text-accent">
                 <T v={s.value} />

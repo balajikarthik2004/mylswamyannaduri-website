@@ -1,19 +1,41 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Instrument_Serif, Anek_Tamil } from "next/font/google";
+import {
+  Fraunces,
+  Instrument_Sans,
+  JetBrains_Mono,
+  Anek_Tamil,
+} from "next/font/google";
 import "./globals.css";
 
 import { LanguageProvider } from "@/lib/i18n";
 import { ScrollEngine } from "@/components/providers/ScrollEngine";
 import { SceneMount } from "@/components/three/SceneMount";
 import { Nav } from "@/components/layout/Nav";
+import { ChromeGate } from "@/components/layout/ChromeGate";
+import { ToastProvider } from "@/components/ui/Toast";
 import { Footer } from "@/components/layout/Footer";
 
-const sans = Geist({ variable: "--font-sans", subsets: ["latin"], display: "swap" });
-const mono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"], display: "swap" });
-const display = Instrument_Serif({
+/* Fraunces carries the editorial voice — a variable serif with an optical-size
+   axis, so headlines stay high-contrast without the body text going spindly.
+   The italic is loaded as a real face: the wordmark and every mission subtitle
+   set in it, and Fraunces' italic is a genuine cursive cut (single-storey a,
+   swashed w) — synthesising it from the roman just shears the uprights.
+   Instrument Sans handles UI copy; JetBrains Mono carries the data labels. */
+const display = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: "400",
+  display: "swap",
+  style: ["normal", "italic"],
+  axes: ["SOFT", "WONK", "opsz"],
+});
+const sans = Instrument_Sans({
+  variable: "--font-sans",
+  subsets: ["latin"],
+  display: "swap",
+});
+const mono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
   display: "swap",
 });
 const tamil = Anek_Tamil({
@@ -71,14 +93,27 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${sans.variable} ${mono.variable} ${display.variable} ${tamil.variable} antialiased`}
     >
-      <body className="min-h-dvh bg-paper">
+      {/* Extensions stamp their own attributes onto <body> before React
+          hydrates — ColorZilla's `cz-shortcut-listen`, Grammarly's `data-gr-*`
+          — which React then reports as a hydration mismatch the page did not
+          cause and cannot prevent. The suppression is shallow: it covers this
+          element's own attributes only, so every component inside is still
+          hydration-checked as before. Body attributes here are static, so
+          nothing real is being masked. */}
+      <body className="min-h-dvh bg-paper" suppressHydrationWarning>
         <LanguageProvider>
-          <ScrollEngine />
-          <SceneMount />
-          <Nav />
-          <main className="relative z-10">{children}</main>
-          <Footer />
-          <div className="grain-layer" aria-hidden="true" />
+          <ToastProvider>
+            <ChromeGate>
+              <ScrollEngine />
+              <SceneMount />
+              <Nav />
+            </ChromeGate>
+            <main className="relative z-10">{children}</main>
+            <ChromeGate>
+              <Footer />
+              <div className="grain-layer" aria-hidden="true" />
+            </ChromeGate>
+          </ToastProvider>
         </LanguageProvider>
       </body>
     </html>

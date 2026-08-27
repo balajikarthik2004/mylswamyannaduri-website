@@ -132,7 +132,7 @@ export const books: { title: L; note: L; image?: string }[] = [
     note: { en: "Science encyclopaedia in Tamil", ta: "தமிழில் அறிவியல் கலைக்களஞ்சியம்" },
     image: "/img/books/kalanjiyam.jpg",
   },
-  { title: { en: "Vinnum Mannum", ta: "விண்ணும் மண்ணும" }, note: { en: "On sky and soil", ta: "விண்ணையும் மண்ணையும் பற்றி" } },
+  { title: { en: "Vinnum Mannum", ta: "விண்ணும் மண்ணும்" }, note: { en: "On sky and soil", ta: "விண்ணையும் மண்ணையும் பற்றி" } },
   { title: { en: "India-75", ta: "இந்தியா-75" }, note: { en: "On seventy-five years of India", ta: "இந்தியாவின் எழுபத்தைந்து ஆண்டுகள்" } },
   { title: { en: "Periyarum Ariviyalum", ta: "பெரியாரும் அறிவியலும்" }, note: { en: "Periyar and science", ta: "பெரியாரும் அறிவியலும்" } },
   { title: { en: "Ariviyalum Maanudamum", ta: "அறிவியலும் மானுடமும்" }, note: { en: "Science and humanity", ta: "அறிவியலும் மனிதகுலமும்" } },

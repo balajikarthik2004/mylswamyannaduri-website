@@ -39,7 +39,7 @@ export function ContactClient() {
           <div>
             <Reveal>
               <p className="kicker flex items-center gap-3">
-                <span className="inline-block h-px w-8 bg-ember" aria-hidden="true" />
+                <span className="inline-block h-px w-8 bg-brass-2" aria-hidden="true" />
                 <T v={{ en: "Contact", ta: "தொடர்பு" }} />
               </p>
             </Reveal>
@@ -63,7 +63,7 @@ export function ContactClient() {
               <div className="mt-9 flex flex-wrap gap-3">
                 <Link
                   href="/engagements"
-                  className="group inline-flex items-center gap-2.5 rounded-full bg-ink px-7 py-3.5 text-sm font-medium text-paper transition-all duration-300 hover:bg-accent"
+                  className="btn btn-primary px-7 py-3.5"
                 >
                   <T
                     v={{
@@ -71,7 +71,7 @@ export function ContactClient() {
                       ta: "கிடைக்கும் நேரத்தைப் பார்த்து முன்பதிவு செய்ய",
                     }}
                   />
-                  <span className="transition-transform duration-300 group-hover:translate-x-1">
+                  <span className="btn-arrow">
                     →
                   </span>
                 </Link>
@@ -79,7 +79,7 @@ export function ContactClient() {
                   href={ENQUIRY_FORM}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-line-2 px-7 py-3.5 text-sm font-medium text-ink transition-all duration-300 hover:border-ink hover:bg-paper-2"
+                  className="btn btn-ghost px-7 py-3.5"
                 >
                   <T v={{ en: "Official enquiry form", ta: "அதிகாரப்பூர்வ படிவம்" }} />
                   <span aria-hidden="true" className="text-[0.8em] opacity-50">↗</span>
@@ -94,7 +94,7 @@ export function ContactClient() {
                     key={r.k.en}
                     className="grid gap-1 border-b border-line py-5 sm:grid-cols-[12rem_1fr] sm:gap-8"
                   >
-                    <dt className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-ember">
+                    <dt className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-brass">
                       <T v={r.k} />
                     </dt>
                     <dd className="text-[0.92rem] leading-snug text-ink-2 lang-aware">

@@ -60,7 +60,7 @@ export function GalleryClient() {
       <div className="container-x pt-36 pb-24">
         <Reveal>
           <p className="kicker flex items-center gap-3">
-            <span className="inline-block h-px w-8 bg-ember" aria-hidden="true" />
+            <span className="inline-block h-px w-8 bg-brass-2" aria-hidden="true" />
             <T v={{ en: "Gallery", ta: "படத்தொகுப்பு" }} />
           </p>
         </Reveal>
@@ -111,7 +111,7 @@ export function GalleryClient() {
             >
               <button
                 onClick={() => setActive(i)}
-                className="group block w-full overflow-hidden rounded-xl border border-line bg-paper-2 text-left"
+                className="group block w-full overflow-hidden rounded-xl border border-line bg-paper-2 shadow-lift text-left"
               >
                 <span
                   className={[
@@ -161,7 +161,7 @@ export function GalleryClient() {
           <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {videos.map((id, i) => (
               <Reveal as="li" key={id} delay={(i % 3) * 70}>
-                <div className="relative aspect-video overflow-hidden rounded-xl border border-line bg-paper-2">
+                <div className="relative aspect-video overflow-hidden rounded-xl border border-line bg-paper-2 shadow-lift">
                   <iframe
                     src={`https://www.youtube-nocookie.com/embed/${id}`}
                     title={`Video ${i + 1}`}
@@ -218,7 +218,7 @@ export function GalleryClient() {
             className="mx-auto max-h-[86svh] w-[min(92vw,72rem)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="relative max-h-[76svh] overflow-hidden rounded-xl border border-line bg-paper-2">
+            <div className="relative max-h-[76svh] overflow-hidden rounded-xl border border-line bg-paper-2 shadow-lift">
               <Image
                 src={shown[active].src}
                 alt={t(shown[active].caption)}

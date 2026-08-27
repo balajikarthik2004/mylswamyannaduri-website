@@ -45,7 +45,7 @@ export function Nav() {
         className={[
           "fixed inset-x-0 top-0 z-50 transition-all duration-500",
           scrolled
-            ? "border-b border-line bg-paper/80 backdrop-blur-xl"
+            ? "glass border-b border-line shadow-sink"
             : "border-b border-transparent",
         ].join(" ")}
       >
@@ -71,7 +71,7 @@ export function Nav() {
                   className="group relative font-mono text-[0.7rem] uppercase tracking-[0.16em] text-ink-2 transition-colors hover:text-ink"
                 >
                   <T v={l.label} />
-                  <span className="absolute -bottom-1.5 left-0 h-px w-0 bg-accent transition-all duration-400 group-hover:w-full" />
+                  <span className="metal-rule absolute -bottom-1.5 left-0 h-px w-0 transition-all duration-400 group-hover:w-full" />
                 </Link>
               </li>
             ))}
@@ -79,7 +79,7 @@ export function Nav() {
 
           <div className="flex items-center gap-3">
             <div
-              className="flex items-center rounded-full border border-line bg-paper-2/70 p-0.5"
+              className="flex items-center rounded-full border border-line bg-card p-0.5 shadow-sink"
               role="group"
               aria-label="Language"
             >
@@ -103,7 +103,7 @@ export function Nav() {
 
             <button
               onClick={() => setOpen((v) => !v)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-paper-2/70 lg:hidden"
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-line bg-card shadow-sink lg:hidden"
               aria-label={open ? "Close menu" : "Open menu"}
               aria-expanded={open}
             >

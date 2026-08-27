@@ -12,7 +12,7 @@ function MissionPanel({ m, index }: { m: Mission; index: number }) {
         <div className="max-w-[38rem]">
           <Reveal>
             <p className="kicker flex items-center gap-3">
-              <span className="font-mono text-ember">
+              <span className="font-mono text-brass">
                 {String(index + 1).padStart(2, "0")}
               </span>
               <span className="inline-block h-px w-7 bg-line-2" aria-hidden="true" />
@@ -81,12 +81,12 @@ export function Missions() {
 
       {/* Mission-scale numbers */}
       <div className="container-x pb-24">
-        <div className="grid gap-px overflow-hidden rounded-2xl border border-line bg-line md:grid-cols-3">
+        <div className="card grid gap-px overflow-hidden bg-line md:grid-cols-3">
           {missionStats.map((s, i) => (
             <Reveal
               key={s.label.en}
               delay={i * 100}
-              className="bg-paper/85 px-7 py-9 backdrop-blur-sm"
+              className="bg-card px-7 py-9"
             >
               <p className="font-display text-[clamp(2.2rem,4vw,3.2rem)] leading-none tracking-[-0.03em] text-accent">
                 <T v={s.value} />
@@ -102,10 +102,10 @@ export function Missions() {
           <div className="mt-10 flex justify-center">
             <Link
               href="/missions"
-              className="group inline-flex items-center gap-2.5 rounded-full border border-line-2 px-6 py-3 text-sm font-medium text-ink transition-all duration-300 hover:border-ink hover:bg-paper-2"
+              className="btn btn-ghost px-6 py-3"
             >
               <T v={{ en: "All missions in detail", ta: "அனைத்துப் பயணங்களும் விரிவாக" }} />
-              <span className="transition-transform duration-300 group-hover:translate-x-1">
+              <span className="btn-arrow">
                 →
               </span>
             </Link>

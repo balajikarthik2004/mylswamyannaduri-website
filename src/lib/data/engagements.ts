@@ -72,20 +72,61 @@ export const TIMEZONE = "Asia/Kolkata";
 export const TIMEZONE_LABEL = "IST (UTC+5:30)";
 
 /** Minimum notice before a requested date, in days. */
-export const MIN_NOTICE_DAYS = 14;
+export const MIN_NOTICE_DAYS = 5;
 /** How far ahead the calendar will accept requests, in months. */
 export const BOOKING_HORIZON_MONTHS = 6;
 
-/** Start times offered per weekday (0 = Sunday). Empty means unavailable. */
-export const WEEKDAY_SLOTS: Record<number, string[]> = {
-  0: [], // Sunday — kept clear
-  1: ["10:00", "11:30", "15:00", "16:30"],
-  2: ["10:00", "11:30", "15:00", "16:30"],
-  3: ["10:00", "11:30", "15:00", "16:30"],
-  4: ["10:00", "11:30", "15:00", "16:30"],
-  5: ["10:00", "11:30", "15:00"],
-  6: ["10:00", "11:30"], // Saturday — outreach mornings
+/* ── Sessions ──────────────────────────────────────────────────
+   Requests are made against a half-day rather than a fixed start
+   time. Pinning a visitor to "11:30" implied a precision his diary
+   does not have — the office settles the exact hour when it
+   confirms. A morning or an afternoon is the real unit. */
+
+export type SessionId = "morning" | "afternoon";
+
+export type Session = {
+  id: SessionId;
+  label: L;
+  /** Bounds of the window, IST, for display and for validating a
+      preferred time against it. */
+  start: string;
+  end: string;
 };
+
+export const sessions: Session[] = [
+  { id: "morning", label: { en: "Morning", ta: "காலை" }, start: "09:30", end: "13:00" },
+  {
+    id: "afternoon",
+    label: { en: "Afternoon", ta: "பிற்பகல்" },
+    start: "14:00",
+    end: "18:00",
+  },
+];
+
+/** Sessions offered per weekday (0 = Sunday). Empty means unavailable. */
+export const WEEKDAY_SESSIONS: Record<number, SessionId[]> = {
+  0: [], // Sunday — kept clear
+  1: ["morning", "afternoon"],
+  2: ["morning", "afternoon"],
+  3: ["morning", "afternoon"],
+  4: ["morning", "afternoon"],
+  5: ["morning", "afternoon"],
+  6: ["morning"], // Saturday — outreach mornings
+};
+
+/* ── How long it runs ──────────────────────────────────────── */
+
+export const DURATION_CHOICES = [30, 45, 60, 90, 120] as const;
+export type DurationMinutes = (typeof DURATION_CHOICES)[number];
+
+/** "90" → "1 hr 30 min", for a label that reads the way people speak. */
+export function durationLabel(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return h === 1 ? "1 hour" : `${h} hours`;
+  return `${h} hr ${m} min`;
+}
 
 /** Dates held back for travel, family or standing commitments. */
 export const BLACKOUT_DATES: string[] = [

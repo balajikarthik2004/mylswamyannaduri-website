@@ -1,4 +1,4 @@
-import { addMinutesToTime } from "@/lib/engagements";
+import { endDateTime } from "@/lib/engagements";
 
 /**
  * Minimal RFC 5545 builder. Times are written as local IST wall-clock with an
@@ -71,9 +71,11 @@ export function buildIcs(event: IcsEvent): string {
   ];
 
   if (event.time) {
-    const end = addMinutesToTime(event.time, event.durationMinutes ?? 60);
+    // The end carries its own date: an engagement that runs past midnight
+    // would otherwise be stamped as ending before it began.
+    const end = endDateTime(event.dateKey, event.time, event.durationMinutes ?? 60);
     lines.push(`DTSTART;TZID=Asia/Kolkata:${stamp(event.dateKey, event.time)}`);
-    lines.push(`DTEND;TZID=Asia/Kolkata:${stamp(event.dateKey, end)}`);
+    lines.push(`DTEND;TZID=Asia/Kolkata:${stamp(end.dateKey, end.time)}`);
   } else {
     const plain = event.dateKey.replace(/-/g, "");
     const next = new Date(event.dateKey);

@@ -70,7 +70,7 @@ export function GalleryStrip() {
           {strip.map((p, i) => (
             <figure
               key={p.src}
-              className="group relative shrink-0 overflow-hidden rounded-xl border border-line bg-paper-2 max-md:aspect-[1600/630] max-md:w-[82vw] md:h-[42vh] md:w-auto md:[aspect-ratio:1600/630]"
+              className="group relative shrink-0 overflow-hidden rounded-xl border border-line bg-paper-2 shadow-lift max-md:aspect-[1600/630] max-md:w-[82vw] md:h-[42vh] md:w-auto md:[aspect-ratio:1600/630]"
             >
               <Image
                 src={p.src}
@@ -80,7 +80,7 @@ export function GalleryStrip() {
                 className="object-cover transition-transform duration-[1.2s] ease-out group-hover:scale-[1.03]"
                 loading={i < 2 ? "eager" : "lazy"}
               />
-              <figcaption className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-paper/85 px-3 py-1 font-mono text-[0.6rem] uppercase tracking-[0.16em] text-ink-2 backdrop-blur">
+              <figcaption className="pointer-events-none absolute bottom-3 left-3 rounded-full bg-card px-3 py-1 font-mono text-[0.6rem] uppercase tracking-[0.16em] text-ink-2 backdrop-blur">
                 {String(i + 1).padStart(2, "0")} / {strip.length}
               </figcaption>
             </figure>
@@ -100,10 +100,10 @@ export function GalleryStrip() {
           <div className="flex justify-center">
             <Link
               href="/gallery"
-              className="group inline-flex items-center gap-2.5 rounded-full border border-line-2 px-6 py-3 text-sm font-medium text-ink transition-all duration-300 hover:border-ink hover:bg-paper-2"
+              className="btn btn-ghost px-6 py-3"
             >
               <T v={{ en: "Open the full gallery", ta: "முழு படத்தொகுப்பைக் காண்க" }} />
-              <span className="transition-transform duration-300 group-hover:translate-x-1">
+              <span className="btn-arrow">
                 →
               </span>
             </Link>
