@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { adminConfigured, currentSession } from "@/lib/server/admin-auth";
-import { readAll } from "@/lib/server/booking-store";
+import { describeStore, readAll } from "@/lib/server/booking-store";
 import { mailProvider } from "@/lib/server/mailer";
 import { LoginForm } from "@/components/office/LoginForm";
 import { RequestsBoard } from "@/components/office/RequestsBoard";
@@ -28,11 +28,12 @@ export default async function OfficePage() {
     return <LoginForm configured={adminConfigured()} />;
   }
 
-  const records = await readAll();
+  const [records, store] = await Promise.all([readAll(), describeStore()]);
   return (
     <RequestsBoard
       initial={records}
       provider={mailProvider()}
+      store={store}
       user={session.user}
     />
   );

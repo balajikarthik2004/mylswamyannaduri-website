@@ -1,8 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import type { BookingRecord, BookingStatus } from "@/lib/server/booking-store";
+import { useMemo, useState, useTransition } from "react";
+import type {
+  BookingRecord,
+  BookingStatus,
+  StoreHealth,
+} from "@/lib/server/booking-store";
 import { durationLabel, engagementTypes, sessions } from "@/lib/data/engagements";
 import { addMinutesToTime, formatDateLong, formatTime12 } from "@/lib/engagements";
 import { useToast } from "@/components/ui/Toast";
@@ -63,10 +67,12 @@ function received(iso: string): string {
 export function RequestsBoard({
   initial,
   provider,
+  store,
   user,
 }: {
   initial: BookingRecord[];
   provider: "resend" | "smtp" | "none";
+  store: StoreHealth;
   user: string;
 }) {
   const router = useRouter();
@@ -74,6 +80,7 @@ export function RequestsBoard({
   const [busy, setBusy] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [reloading, startReload] = useTransition();
   const toast = useToast();
 
   const counts = useMemo(() => {
@@ -161,6 +168,25 @@ export function RequestsBoard({
               <span aria-hidden="true">●</span>
               {provider === "none" ? "mail off" : `mail · ${provider}`}
             </span>
+            {/* The store is the other thing that can be quietly broken, and
+                unlike the mailer it fails by showing an empty queue — which
+                looks exactly like a quiet week. It gets a chip of its own. */}
+            <span
+              title={
+                store.durable
+                  ? `Requests are stored in ${store.location}`
+                  : `${store.location} — ${store.degradedReason ?? "not durable"}`
+              }
+              className={[
+                "hidden items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[0.55rem] uppercase tracking-[0.14em] sm:inline-flex",
+                store.durable
+                  ? "bg-success/20 text-[#8ad6ac]"
+                  : "bg-ember/20 text-[#f0b48f]",
+              ].join(" ")}
+            >
+              <span aria-hidden="true">●</span>
+              {store.durable ? `store · ${store.driver}` : "store · ephemeral"}
+            </span>
             <span className="hidden font-mono text-[0.6rem] uppercase tracking-[0.14em] text-paper/45 sm:inline">
               {user}
             </span>
@@ -183,10 +209,57 @@ export function RequestsBoard({
               The queue
             </h1>
           </div>
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-ink-3">
-            {counts.all} received · {counts.pending} awaiting you
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-ink-3">
+              {counts.all} received · {counts.pending} awaiting you
+            </p>
+            {/* The queue is server-rendered, so a request that arrives while
+                the page is open is not on screen until something re-fetches.
+                An explicit control beats an operator wondering whether the
+                board is live or stale. */}
+            <button
+              type="button"
+              onClick={() => startReload(() => router.refresh())}
+              disabled={reloading}
+              aria-busy={reloading}
+              className="rounded-full border border-line-2 bg-card px-3.5 py-1.5 font-mono text-[0.58rem] uppercase tracking-[0.14em] text-ink-2 shadow-sink transition-colors hover:border-ink hover:text-ink disabled:opacity-60"
+            >
+              {reloading ? "Checking…" : "Reload"}
+            </button>
+          </div>
         </div>
+
+        {/* The failure this console used to hide.
+            On a read-only filesystem — which is every serverless deployment —
+            the store fell back to one instance's memory, so a request could
+            be accepted, given a reference, and then be invisible here. The
+            banner names where records actually are and what it would take to
+            make that durable, because "no requests" and "requests are being
+            discarded" render identically otherwise. */}
+        {!store.durable ? (
+          <div className="mt-7 rounded-xl border border-ember/25 bg-ember-soft px-4 py-3.5 text-[0.82rem] leading-relaxed text-ember">
+            <p>
+              <strong>Requests are not being stored durably.</strong>{" "}
+              {store.degradedReason ??
+                "The current store does not survive a restart."}
+            </p>
+            <p className="mt-2 text-ink-2">
+              Records are in{" "}
+              <code className="font-mono text-[0.78rem]">{store.location}</code>.
+              Set <code className="font-mono text-[0.78rem]">KV_REST_API_URL</code>{" "}
+              and <code className="font-mono text-[0.78rem]">KV_REST_API_TOKEN</code>{" "}
+              (Vercel KV or Upstash Redis) — or{" "}
+              <code className="font-mono text-[0.78rem]">BOOKINGS_DATA_DIR</code>{" "}
+              pointing at a writable volume — and every instance will read the
+              same queue. Until then, the alert email sent on each new request
+              is the reliable copy.
+            </p>
+          </div>
+        ) : store.degradedReason ? (
+          <p className="mt-7 rounded-xl border border-brass-2/30 bg-brass-soft px-4 py-3.5 text-[0.82rem] leading-relaxed text-brass-deep">
+            {store.degradedReason}
+          </p>
+        ) : null}
 
         {/* An operator approving requests has to know whether anyone is
             actually being told. Loud only when the answer is no. */}

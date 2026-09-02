@@ -76,10 +76,58 @@ server-side** (the client's view of what's free can be stale), rejects
 honeypot submissions, and throttles per IP. `GET` returns the taken slots so
 the grid reflects real state.
 
-`src/lib/server/booking-store.ts` is a deliberately small persistence seam —
-it appends to `.data/bookings.json` and degrades to in-memory on a read-only
-filesystem. Point `readAll`/`append` at a database, CRM or email provider and
-nothing else in the app changes.
+### Where requests are stored
+
+`src/lib/server/booking-store.ts` picks its backing store by probing what the
+environment can actually do, most durable first:
+
+| Driver | Chosen when | Survives a restart |
+| --- | --- | --- |
+| `redis` | `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Vercel KV or Upstash, over REST — no client library) | yes |
+| `file` | `BOOKINGS_DATA_DIR`, else `./.data`, else the OS temp directory | yes, except from the temp directory |
+| `memory` | nothing above is available | no |
+
+**A serverless deployment needs Redis.** The deployment directory is read-only
+on Vercel and its equivalents, so the file driver lands in the temp directory:
+records then live in one instance's disk, vanish when it recycles, and are
+invisible to the instance that serves `/office`. That is what "the deployed
+site shows no requests" is — the requests were accepted and then dropped.
+
+Whichever driver is live is reported by `describeStore()` and shown in the
+console, as a chip in the bar and a banner when it is not durable. "No requests
+yet" and "requests are being discarded" render identically otherwise, which is
+what made this failure invisible for as long as it was.
+
+The file driver writes to a temp file and `rename`s it into place, so an
+interrupted write cannot leave a half-written JSON document behind, and all of
+its read-modify-write cycles queue behind one promise chain, so two requests
+arriving together cannot overwrite each other. A file that fails to parse
+anyway is moved aside as `bookings.json.corrupt-<timestamp>` rather than
+overwritten.
+
+### Being told a request came in
+
+Every accepted request also emails the office — `OFFICE_EMAIL`, falling back to
+`MAIL_FROM`'s own address — with `Reply-To` set to the requester. It carries
+every field needed to act on the request, so the queue is never the only copy.
+The send runs in `after()`, so a slow mail server cannot delay or fail a
+booking that has already been stored.
+
+## Deploying
+
+Set, in the host's environment:
+
+| Variable | Why |
+| --- | --- |
+| `ADMIN_USER`, `ADMIN_PASSWORD`, `ADMIN_SECRET` | the office console refuses every sign-in without the first two, and re-signs cookies on each restart without the third |
+| `MAIL_FROM` + (`RESEND_API_KEY` \| `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`) | decisions and new-request alerts |
+| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | **required on serverless** — see *Where requests are stored* |
+| `OFFICE_EMAIL`, `SITE_URL` | who gets the new-request alert, and a working link back to the console inside it |
+
+Open `/office` after the first deploy and read the two chips in the bar. They
+say which mail provider and which store are live; anything ephemeral is called
+out in a banner under the heading rather than left to be discovered when a
+request goes missing.
 
 ## Notes for future work
 

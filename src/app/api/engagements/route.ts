@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { append, bookedSessionsByDate } from "@/lib/server/booking-store";
+import { sendRequestAlert } from "@/lib/server/booking-mail";
 import { validateBooking, type BookingInput } from "@/lib/engagements";
 import type { EngagementTypeId, SessionId } from "@/lib/data/engagements";
 
@@ -79,6 +80,26 @@ export async function POST(request: Request) {
   }
 
   const record = await append(input);
+
+  /* Tell the office, after the response has gone out.
+     Two reasons it is `after` and not awaited inline: the visitor should not
+     wait on an SMTP handshake to see their reference, and a mail provider
+     having a bad minute must not turn a request that was accepted and stored
+     into a 500 the visitor reads as "it did not go through". `after` still
+     runs on the platform's clock, so the send genuinely happens — a floating
+     promise would be cut off when the invocation is frozen. */
+  after(async () => {
+    const alert = await sendRequestAlert(record).catch((err: unknown) => ({
+      ok: false as const,
+      provider: "none" as const,
+      reason: err instanceof Error ? err.message : "Unknown mail error.",
+    }));
+    if (!alert.ok) {
+      console.error(
+        `[engagements] ${record.reference} stored, but the office alert did not go out: ${alert.reason}`,
+      );
+    }
+  });
 
   return NextResponse.json(
     {

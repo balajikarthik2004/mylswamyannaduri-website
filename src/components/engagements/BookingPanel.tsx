@@ -127,17 +127,21 @@ export function BookingPanel({
 
   /* A session chosen on one day must not survive a jump to another: Saturday
      runs no afternoon, so a stale pick would leave the form open on a window
-     this date does not offer. React's documented adjust-during-render
-     pattern; an effect here would cascade a second render. */
+     this date does not offer.
+
+     This is React's documented adjust-during-render pattern, which is what
+     the comment here always claimed — but the reset was written as an effect,
+     which is a render too late. For one commit the panel painted the new date
+     beside the old date's session, and a submit landing in that window sent a
+     session the new day may not even offer. Doing it during render means the
+     stale pick is never shown at all. */
   const [lastDate, setLastDate] = useState(date);
-  useEffect(() => {
-    if (lastDate !== date) {
-      setLastDate(date);
-      setSession(null);
-      setErrors({});
-      setServerError(null);
-    }
-  }, [date, lastDate]);
+  if (lastDate !== date) {
+    setLastDate(date);
+    setSession(null);
+    setErrors({});
+    setServerError(null);
+  }
 
   const offered = useMemo(() => (date ? sessionsForDate(date) : []), [date]);
   const taken = (date && bookedSessions[date]) || [];

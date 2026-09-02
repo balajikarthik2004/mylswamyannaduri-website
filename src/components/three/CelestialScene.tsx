@@ -295,7 +295,15 @@ function Rig() {
 
 export default function CelestialScene() {
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
-  const narrow = useMediaQuery("(max-width: 767px)");
+  /* The scene's narrow/wide switch has to be the *layout's* breakpoint, not
+     one below it. Every column in the app splits at `lg` (1024px), but this
+     read 767px — so between 768 and 1023 the bodies were placed with the
+     desktop table, whose x offsets of ±4.6 to ±5.9 assume a gutter that only
+     exists on a wide screen. In that band the Moon landed on the copy at
+     full strength: over the hero's centred column, and across the missions
+     lede. The narrow table is the one written for viewports with nowhere to
+     hide a planet, which is exactly what those widths are. */
+  const narrow = useMediaQuery("(max-width: 1023px)");
 
   // Effects here only push into external systems (the scene store, listeners).
   useEffect(() => {
