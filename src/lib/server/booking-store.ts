@@ -3,6 +3,7 @@ import "server-only";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { MongoClient, type Db } from "mongodb";
 import type { BookingInput } from "@/lib/engagements";
 
 /**
@@ -20,9 +21,8 @@ import type { BookingInput } from "@/lib/engagements";
  * So the backing store is now chosen by probing what the environment can
  * actually do, in descending order of durability:
  *
- *   1. Redis over the Upstash REST API  — `KV_REST_API_URL`/`KV_REST_API_TOKEN`
- *      or `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`. Plain `fetch`,
- *      no client library, so it works on every runtime.
+ *   1. MongoDB Atlas — `MONGODB_URI`.
+ *      Requires the mongodb driver and connects to the cluster.
  *   2. A JSON file — `BOOKINGS_DATA_DIR`, else `./.data`, else the OS temp
  *      directory. Writes are atomic and serialized (see below).
  *   3. Process memory — last resort only.
@@ -47,7 +47,7 @@ export type BookingRecord = BookingInput & {
   notifyError?: string;
 };
 
-export type StoreDriver = "redis" | "file" | "memory";
+export type StoreDriver = "mongodb" | "file" | "memory";
 
 export type StoreHealth = {
   driver: StoreDriver;
@@ -59,57 +59,18 @@ export type StoreHealth = {
   degradedReason?: string;
 };
 
-/* ── Redis over the Upstash REST API ───────────────────────────
-   One hash keyed by reference rather than one array under one key: a hash
-   field is written independently, so two requests arriving together cannot
-   overwrite each other the way a read-modify-write of a whole array does. */
+/* ── MongoDB Atlas ─────────────────────────────────────────── */
 
-const HASH_KEY = "annadurai:bookings";
-const CLAIM_PREFIX = "annadurai:decided:";
+let cachedClient: MongoClient | null = null;
 
-type RedisConfig = { url: string; token: string };
-
-function redisConfig(): RedisConfig | null {
-  const url =
-    process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL ?? "";
-  const token =
-    process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN ?? "";
-  if (!url || !token) return null;
-  return { url: url.replace(/\/+$/, ""), token };
-}
-
-/** Run one or more commands down the REST pipeline. Throws on any error. */
-async function redisPipeline(
-  cfg: RedisConfig,
-  commands: (string | number)[][],
-): Promise<unknown[]> {
-  const res = await fetch(`${cfg.url}/pipeline`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${cfg.token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(commands),
-    cache: "no-store",
-    // A hung store must not hold a request open until the platform kills it.
-    signal: AbortSignal.timeout(8000),
-  });
-
-  if (!res.ok) {
-    throw new Error(
-      `Redis responded ${res.status}: ${(await res.text().catch(() => "")).slice(0, 200)}`,
-    );
+async function getMongoDb(): Promise<Db | null> {
+  const uri = process.env.MONGODB_URI;
+  if (!uri) return null;
+  if (!cachedClient) {
+    cachedClient = new MongoClient(uri);
+    await cachedClient.connect();
   }
-
-  const body = (await res.json()) as
-    | { error: string }
-    | { result?: unknown; error?: string }[];
-
-  if (!Array.isArray(body)) throw new Error(body.error ?? "Redis pipeline failed.");
-  return body.map((entry) => {
-    if (entry.error) throw new Error(entry.error);
-    return entry.result;
-  });
+  return cachedClient.db();
 }
 
 /* ── File store ────────────────────────────────────────────────
@@ -213,7 +174,7 @@ function memoryRecords(): BookingRecord[] {
    share one probe rather than each running their own. */
 
 type Resolved =
-  | { kind: "redis"; cfg: RedisConfig; health: StoreHealth }
+  | { kind: "mongodb"; db: Db; health: StoreHealth }
   | { kind: "file"; target: FileTarget; health: StoreHealth }
   | { kind: "memory"; health: StoreHealth };
 
@@ -226,25 +187,25 @@ async function resolve(): Promise<Resolved> {
 async function resolveOnce(): Promise<Resolved> {
   let degradedReason: string | undefined;
 
-  const cfg = redisConfig();
-  if (cfg) {
-    try {
-      await redisPipeline(cfg, [["PING"]]);
+  try {
+    const db = await getMongoDb();
+    if (db) {
+      await db.command({ ping: 1 });
       return {
-        kind: "redis",
-        cfg,
+        kind: "mongodb",
+        db,
         health: {
-          driver: "redis",
+          driver: "mongodb",
           durable: true,
-          location: `Redis · ${new URL(cfg.url).host}`,
+          location: `MongoDB Atlas`,
         },
       };
-    } catch (err) {
-      degradedReason = `Redis is configured but unreachable — ${
-        err instanceof Error ? err.message : "unknown error"
-      }`;
-      console.error(`[booking-store] ${degradedReason}`);
     }
+  } catch (err) {
+    degradedReason = `MongoDB is configured but unreachable — ${
+      err instanceof Error ? err.message : "unknown error"
+    }`;
+    console.error(`[booking-store] ${degradedReason}`);
   }
 
   const target = await resolveFileTarget();
@@ -267,7 +228,7 @@ async function resolveOnce(): Promise<Resolved> {
 
   const reason =
     degradedReason ??
-    "No writable directory and no Redis configured — requests exist only in this process's memory and will be lost.";
+    "No writable directory and no MongoDB configured — requests exist only in this process's memory and will be lost.";
   console.error(`[booking-store] ${reason}`);
   return {
     kind: "memory",
@@ -282,7 +243,7 @@ export async function describeStore(): Promise<StoreHealth> {
 
 /* ── Mutation queue ────────────────────────────────────────────
    Serializes file and memory read-modify-write cycles within this process.
-   Redis needs no queue: each write there targets one hash field. */
+   Redis/MongoDB needs no queue: each write there targets one document. */
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -298,30 +259,17 @@ function serialize<T>(work: () => Promise<T>): Promise<T> {
 export async function readAll(): Promise<BookingRecord[]> {
   const store = await resolve();
 
-  if (store.kind === "redis") {
-    const [flat] = await redisPipeline(store.cfg, [["HGETALL", HASH_KEY]]);
-    return parseHash(flat);
+  if (store.kind === "mongodb") {
+    const docs = await store.db.collection("bookings").find({}).toArray();
+    return docs.map((doc) => {
+      const { _id, ...rest } = doc;
+      return rest as unknown as BookingRecord;
+    });
   }
   if (store.kind === "file") {
     return readFileRecords(store.target);
   }
   return [...memoryRecords()];
-}
-
-/** Upstash returns a hash as a flat [field, value, field, value] array. */
-function parseHash(flat: unknown): BookingRecord[] {
-  const out: BookingRecord[] = [];
-  if (!Array.isArray(flat)) return out;
-  for (let i = 1; i < flat.length; i += 2) {
-    const raw = flat[i];
-    if (typeof raw !== "string") continue;
-    try {
-      out.push(JSON.parse(raw) as BookingRecord);
-    } catch {
-      /* one unreadable field must not hide the rest of the queue */
-    }
-  }
-  return out;
 }
 
 /**
@@ -360,14 +308,11 @@ export async function findByReference(
   reference: string,
 ): Promise<BookingRecord | undefined> {
   const store = await resolve();
-  if (store.kind === "redis") {
-    const [raw] = await redisPipeline(store.cfg, [["HGET", HASH_KEY, reference]]);
-    if (typeof raw !== "string") return undefined;
-    try {
-      return JSON.parse(raw) as BookingRecord;
-    } catch {
-      return undefined;
-    }
+  if (store.kind === "mongodb") {
+    const doc = await store.db.collection("bookings").findOne({ reference });
+    if (!doc) return undefined;
+    const { _id, ...rest } = doc;
+    return rest as unknown as BookingRecord;
   }
   const all = await readAll();
   return all.find((b) => b.reference === reference);
@@ -385,10 +330,8 @@ export async function append(input: BookingInput): Promise<BookingRecord> {
 
   const store = await resolve();
 
-  if (store.kind === "redis") {
-    await redisPipeline(store.cfg, [
-      ["HSET", HASH_KEY, record.reference, JSON.stringify(record)],
-    ]);
+  if (store.kind === "mongodb") {
+    await store.db.collection("bookings").insertOne({ ...record });
     return record;
   }
 
@@ -416,45 +359,23 @@ export async function decide(
 ): Promise<BookingRecord | null> {
   const store = await resolve();
 
-  if (store.kind === "redis") {
-    const [raw] = await redisPipeline(store.cfg, [["HGET", HASH_KEY, reference]]);
-    if (typeof raw !== "string") return null;
+  if (store.kind === "mongodb") {
+    const collection = store.db.collection("bookings");
+    const updates: Partial<BookingRecord> = {
+      status,
+      decidedAt: new Date().toISOString(),
+    };
+    if (note?.trim()) updates.decisionNote = note.trim();
 
-    let record: BookingRecord;
-    try {
-      record = JSON.parse(raw) as BookingRecord;
-    } catch {
-      return null;
-    }
-    if (record.status !== "pending") return null;
+    const result = await collection.findOneAndUpdate(
+      { reference, status: "pending" }, // Only update if still pending
+      { $set: updates },
+      { returnDocument: "after" }
+    );
 
-    /* Two instances can hold the same pending record at the same instant, so
-       "read, check, write" is not enough on its own. The claim key is set
-       NX — only one caller gets it, and only that caller goes on to mail the
-       requester. It expires so a crash between claim and write cannot wedge
-       a request as undecidable forever. */
-    const [claim] = await redisPipeline(store.cfg, [
-      ["SET", `${CLAIM_PREFIX}${reference}`, status, "NX", "EX", 86400],
-    ]);
-    if (claim === null) return null;
-
-    record.status = status;
-    record.decidedAt = new Date().toISOString();
-    if (note?.trim()) record.decisionNote = note.trim();
-
-    try {
-      await redisPipeline(store.cfg, [
-        ["HSET", HASH_KEY, reference, JSON.stringify(record)],
-      ]);
-    } catch (err) {
-      // The claim is only meaningful once the decision is stored. Release it,
-      // or a failed write leaves the request permanently undecidable.
-      await redisPipeline(store.cfg, [
-        ["DEL", `${CLAIM_PREFIX}${reference}`],
-      ]).catch(() => {});
-      throw err;
-    }
-    return record;
+    if (!result) return null;
+    const { _id, ...rest } = result;
+    return rest as unknown as BookingRecord;
   }
 
   return serialize(async () => {
@@ -480,21 +401,12 @@ export async function markNotified(
 ): Promise<void> {
   const store = await resolve();
 
-  if (store.kind === "redis") {
-    const [raw] = await redisPipeline(store.cfg, [["HGET", HASH_KEY, reference]]);
-    if (typeof raw !== "string") return;
-    let record: BookingRecord;
-    try {
-      record = JSON.parse(raw) as BookingRecord;
-    } catch {
-      return;
-    }
-    record.notified = notified;
-    if (error) record.notifyError = error;
-    else delete record.notifyError;
-    await redisPipeline(store.cfg, [
-      ["HSET", HASH_KEY, reference, JSON.stringify(record)],
-    ]);
+  if (store.kind === "mongodb") {
+    const updateQuery: any = { $set: { notified } };
+    if (error) updateQuery.$set.notifyError = error;
+    else updateQuery.$unset = { notifyError: "" };
+
+    await store.db.collection("bookings").updateOne({ reference }, updateQuery);
     return;
   }
 

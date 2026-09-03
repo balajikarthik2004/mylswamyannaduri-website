@@ -83,11 +83,11 @@ environment can actually do, most durable first:
 
 | Driver | Chosen when | Survives a restart |
 | --- | --- | --- |
-| `redis` | `KV_REST_API_URL` + `KV_REST_API_TOKEN` (Vercel KV or Upstash, over REST — no client library) | yes |
+| `mongodb` | `MONGODB_URI` (MongoDB Atlas cluster) | yes |
 | `file` | `BOOKINGS_DATA_DIR`, else `./.data`, else the OS temp directory | yes, except from the temp directory |
 | `memory` | nothing above is available | no |
 
-**A serverless deployment needs Redis.** The deployment directory is read-only
+**A serverless deployment needs MongoDB.** The deployment directory is read-only
 on Vercel and its equivalents, so the file driver lands in the temp directory:
 records then live in one instance's disk, vanish when it recycles, and are
 invisible to the instance that serves `/office`. That is what "the deployed
@@ -121,7 +121,7 @@ Set, in the host's environment:
 | --- | --- |
 | `ADMIN_USER`, `ADMIN_PASSWORD`, `ADMIN_SECRET` | the office console refuses every sign-in without the first two, and re-signs cookies on each restart without the third |
 | `MAIL_FROM` + (`RESEND_API_KEY` \| `SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`) | decisions and new-request alerts |
-| `KV_REST_API_URL`, `KV_REST_API_TOKEN` | **required on serverless** — see *Where requests are stored* |
+| `MONGODB_URI` | **required on serverless** — see *Where requests are stored* |
 | `OFFICE_EMAIL`, `SITE_URL` | who gets the new-request alert, and a working link back to the console inside it |
 
 Open `/office` after the first deploy and read the two chips in the bar. They

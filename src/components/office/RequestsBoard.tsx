@@ -246,9 +246,8 @@ export function RequestsBoard({
             <p className="mt-2 text-ink-2">
               Records are in{" "}
               <code className="font-mono text-[0.78rem]">{store.location}</code>.
-              Set <code className="font-mono text-[0.78rem]">KV_REST_API_URL</code>{" "}
-              and <code className="font-mono text-[0.78rem]">KV_REST_API_TOKEN</code>{" "}
-              (Vercel KV or Upstash Redis) — or{" "}
+              Set <code className="font-mono text-[0.78rem]">MONGODB_URI</code>{" "}
+              (MongoDB Atlas cluster) — or{" "}
               <code className="font-mono text-[0.78rem]">BOOKINGS_DATA_DIR</code>{" "}
               pointing at a writable volume — and every instance will read the
               same queue. Until then, the alert email sent on each new request
