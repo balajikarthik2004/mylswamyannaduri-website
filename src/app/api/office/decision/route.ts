@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { currentSession } from "@/lib/server/admin-auth";
 import { decide, markNotified } from "@/lib/server/booking-store";
 import { sendDecisionMail } from "@/lib/server/booking-mail";
@@ -47,6 +48,8 @@ export async function POST(request: Request) {
      show which requesters still have to be told by hand. */
   const mail = await sendDecisionMail(record);
   await markNotified(reference, mail.ok, mail.ok ? undefined : mail.reason);
+
+  revalidatePath("/office");
 
   return NextResponse.json({
     ok: true,

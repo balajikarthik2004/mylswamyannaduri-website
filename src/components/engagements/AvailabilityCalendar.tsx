@@ -34,7 +34,7 @@ const STATUS_STYLES: Record<DayStatus, string> = {
   open:
     "bg-card border-line text-ink shadow-sink cursor-pointer " +
     "hover:-translate-y-0.5 hover:border-brass-2 hover:shadow-lift",
-  booked: "bg-accent-tint border-accent-soft text-accent cursor-default",
+  booked: "bg-accent border-accent text-paper cursor-default font-medium shadow-sm",
   blackout:
     "border-transparent text-ink-4 cursor-default " +
     "[background-image:repeating-linear-gradient(135deg,transparent,transparent_4px,var(--color-paper-3)_4px,var(--color-paper-3)_5px)]",
@@ -46,8 +46,6 @@ const STATUS_STYLES: Record<DayStatus, string> = {
 export const legend: { status: DayStatus; label: L }[] = [
   { status: "open", label: { en: "Open for requests", ta: "கோரிக்கைக்குத் திறந்துள்ளது" } },
   { status: "booked", label: { en: "Committed", ta: "ஒதுக்கப்பட்டது" } },
-  { status: "blackout", label: { en: "Held", ta: "ஒதுக்கி வைக்கப்பட்டது" } },
-  { status: "notice", label: { en: "Inside notice period", ta: "அறிவிப்புக் காலத்திற்குள்" } },
 ];
 
 export function AvailabilityCalendar({
@@ -260,7 +258,7 @@ export function AvailabilityCalendar({
                 l.status === "open"
                   ? "border-line bg-card shadow-sink"
                   : l.status === "booked"
-                    ? "border-accent-soft bg-accent-tint"
+                    ? "border-accent bg-accent shadow-sm"
                     : l.status === "blackout"
                       ? "border-transparent [background-image:repeating-linear-gradient(135deg,transparent,transparent_3px,var(--color-paper-3)_3px,var(--color-paper-3)_4px)]"
                       : "border-dashed border-line-2 bg-transparent",
