@@ -129,6 +129,31 @@ export function RequestsBoard({
     }
   };
 
+  const del = async (reference: string) => {
+    if (!window.confirm("Are you sure you want to delete this request permanently?")) return;
+    setBusy(reference);
+    try {
+      const res = await fetch("/api/office/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference }),
+      });
+      if (!res.ok) {
+        toast.error("Could not delete request.");
+        setBusy(null);
+        return;
+      }
+      toast.success("Request deleted.");
+      startReload(() => {
+        router.refresh();
+        setBusy(null);
+      });
+    } catch {
+      toast.error("Could not reach the server.");
+      setBusy(null);
+    }
+  };
+
   const signOut = async () => {
     await fetch("/api/office/logout", { method: "POST" });
     router.refresh();
@@ -391,6 +416,14 @@ export function RequestsBoard({
                             ⚠ not emailed
                           </span>
                         ) : null}
+                        <button
+                          type="button"
+                          onClick={() => del(r.reference)}
+                          disabled={working}
+                          className="mt-1 font-mono text-[0.55rem] uppercase tracking-[0.12em] text-ink-4 underline hover:text-ember transition-colors disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </div>
 

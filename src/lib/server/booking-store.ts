@@ -421,3 +421,21 @@ export async function markNotified(
     if (store.kind === "file") await writeFileRecords(store.target, all);
   });
 }
+
+/** Permanently delete a record. */
+export async function remove(reference: string): Promise<void> {
+  const store = await resolve();
+
+  if (store.kind === "mongodb") {
+    await store.db.collection("bookings").deleteOne({ reference });
+    return;
+  }
+
+  await serialize(async () => {
+    const all =
+      store.kind === "file" ? await readFileRecords(store.target) : memoryRecords();
+    const filtered = all.filter((b) => b.reference !== reference);
+    if (store.kind === "file") await writeFileRecords(store.target, filtered);
+    else if (globalThis.__annaduraiBookings) globalThis.__annaduraiBookings = filtered;
+  });
+}
